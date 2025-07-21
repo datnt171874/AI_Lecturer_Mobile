@@ -1,4 +1,4 @@
-import 'package:app_ai_lecturer/pages/dashboard/dashboard.dart';
+import 'package:app_ai_lecturer/pages/welcomePage.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: DashboardPage(),
+      home: WelcomeScreen(),
     );
   }
 }
