@@ -4,6 +4,9 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:app_ai_lecturer/widgets/CustomScaffold.dart';
 import 'package:app_ai_lecturer/pages/dashboard.dart';
 import '../themes/theme.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -15,6 +18,98 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _formSignInKey = GlobalKey<FormState>();
   bool rememberPassword = true;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  // Replace with your backend API base URL
+  final String apiBaseUrl = 'http://10.0.2.2:8080/api/auth';
+
+  Future<void> _login() async {
+    if (_formSignInKey.currentState!.validate() && rememberPassword) {
+      try {
+        final response = await http.post(
+          Uri.parse('$apiBaseUrl/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
+        final responseData = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          String token = responseData['token'];
+          // Store token securely
+          final storage = FlutterSecureStorage();
+          await storage.write(key: 'jwt_token', value: token);
+
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(responseData['message'])));
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
+          );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(responseData['message'])));
+        }
+      } catch (error) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $error')));
+      }
+    } else if (!rememberPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to the processing of personal data'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _googleLogin() async {
+    // Implement Google Sign-In using google_sign_in package
+    // Example (requires google_sign_in package):
+    /*
+    final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+    try {
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser != null) {
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final response = await http.post(
+          Uri.parse('$apiBaseUrl/google-login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'idToken': googleAuth.idToken}),
+        );
+
+        final responseData = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          String token = responseData['token'];
+          // Store token securely
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['message'])),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['message'])),
+          );
+        }
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In Error: $error')),
+      );
+    }
+    */
+  }
+
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
@@ -48,6 +143,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 40.0),
                       TextFormField(
+                        controller: _emailController,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter Email';
@@ -59,21 +155,18 @@ class _SignInScreenState extends State<SignInScreen> {
                           hintText: 'Enter Email',
                           hintStyle: const TextStyle(color: Colors.black26),
                           border: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
-                            ),
+                            borderSide: const BorderSide(color: Colors.black12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
-                            ),
+                            borderSide: const BorderSide(color: Colors.black12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
                       const SizedBox(height: 25.0),
                       TextFormField(
+                        controller: _passwordController,
                         obscureText: true,
                         obscuringCharacter: '*',
                         validator: (value) {
@@ -87,15 +180,11 @@ class _SignInScreenState extends State<SignInScreen> {
                           hintText: 'Enter Password',
                           hintStyle: const TextStyle(color: Colors.black26),
                           border: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
-                            ),
+                            borderSide: const BorderSide(color: Colors.black12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
-                            ),
+                            borderSide: const BorderSide(color: Colors.black12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
@@ -136,37 +225,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (_formSignInKey.currentState!.validate() &&
-                                rememberPassword) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Processing Data'),
-                                ),
-                              );
-                              // Chuyển sang dashboard sau khi xử lý thành công
-                              Future.delayed(
-                                const Duration(milliseconds: 500),
-                                () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const DashboardPage(),
-                                    ),
-                                  );
-                                },
-                              );
-                            } else if (!rememberPassword) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please agree to the processing of personal data',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: _login,
                           child: const Text('Sign in'),
                         ),
                       ),
@@ -202,18 +261,20 @@ class _SignInScreenState extends State<SignInScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
+                          GestureDetector(
+                            onTap: _googleLogin,
+                            child: Icon(
+                              Bootstrap.google,
+                              color: Color.fromARGB(255, 223, 65, 89),
+                            ),
+                          ),
                           Icon(
                             Bootstrap.facebook,
                             color: lightColorScheme.primary,
                           ),
-                          Icon(
-                            Bootstrap.google,
-                            color: Color.fromARGB(255, 223, 65, 89),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 25.0),
-                      // don't have an account
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
